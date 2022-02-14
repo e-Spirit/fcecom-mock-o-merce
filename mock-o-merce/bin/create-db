@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const prompts = require('prompts');
+const randomWords = require('random-words');
+const rand = (min, max, digits = 0) => +(Math.random() * (max - min) + min).toFixed(digits);
+
+const IMAGE_SIZE = '540/960';
+const THUMB_SIZE = '160/120';
+
+const JSON_FILE_PATH = __dirname + '/../db.json';
+let contents = [];
+
+const fakeTranslate = function(str,hase) {
+  let gaga = str.split('')
+      .map(char => replaceVowels(char,hase))
+      .join('');
+  return gaga;
+}
+
+const replaceVowels = function(replace_char, i){
+  const vowels = ['a','e','i','o','u'];
+  if(replace_char ==='a'){
+    return vowels[(3+i)%5];
+  }
+  if(replace_char ==='e'){
+    return vowels[(0+i)%5];
+  }
+  if(replace_char ==='i'){
+    return vowels[(4+i)%5];
+  }
+  if(replace_char ==='o'){
+    return vowels[(2+i)%5];
+  }
+  if(replace_char ==='u'){
+    return vowels[(1+i)%5];
+  }
+  return replace_char;
+}
+
+try {
+  contents = JSON.parse(fs.readFileSync(JSON_FILE_PATH).toString()).contentpages;
+} catch (e) {}
+
+(async () => {
+  let { languages, categoriesCount, productsCount, keepContents } = await prompts([
+    {
+      type: 'list',
+      name: 'languages',
+      message: 'Which (virtual) languages should be created?',
+      initial: 'en, de',
+    },
+    {
+      type: 'number',
+      name: 'categoriesCount',
+      message: 'How many categories should be created?',
+      initial: 30,
+      min: 1,
+    },
+    {
+      type: 'number',
+      name: 'productsCount',
+      message: 'How many products should be created?',
+      initial: 100,
+      min: 1,
+    },
+    ...(contents && contents.length
+      ? [
+          {
+            type: 'toggle',
+            name: 'keepContents',
+            message: 'Keep extisting content?',
+            initial: true,
+            active: 'yes',
+            inactive: 'no',
+          },
+        ]
+      : []),
+  ]);
+  languages = languages.filter((language) => language).map((lang, i) => ({ lang, ...(i && { char: i }) }));
+
+  const ids = new Set();
+
+  const generateItem = () => {
+    const words = randomWords({ min: 1, max: 3 });
+    const id = words.join('-');
+    if (ids.has(id)) return generateItem();
+    ids.add(id);
+    const name = words.map((word, i) => (i === 0 || rand(0, 1) === 0 ? word.slice(0, 1).toUpperCase().concat(word.slice(1)) : word)).join(' ');
+
+    const item = { id };
+    languages.forEach(({ lang, char }) => (item[`name_${lang}`] = !char ? name : fakeTranslate(name,char)));
+    return item;
+  };
+
+  const categories = [{ id: null, url: '/catalog' }];
+  for (let i = 0; i < categoriesCount; i++) {
+    const category = generateItem();
+    const parent = categories[rand(0, categories.length - 1)];
+    categories.push({ ...category, parent_id: parent.id, url: `${parent.url}/${category.id}` });
+  }
+  categories.shift();
+
+  const products = [];
+  for (let i = 0; i < productsCount; i++) {
+    const product = generateItem();
+    const category = categories[rand(0, categories.length - 1)];
+
+    products.push({
+      ...product,
+      category_id: category.id,
+      url: `${category.url}/${product.id}`,
+      image: `https://picsum.photos/seed/${product.id}/${IMAGE_SIZE}`,
+      thumbnail: `https://picsum.photos/seed/${product.id}/${THUMB_SIZE}`,
+    });
+  }
+
+  const data = { categories, products, contentpages: keepContents ? contents : [] };
+  fs.writeFileSync(JSON_FILE_PATH, JSON.stringify(data));
+})();

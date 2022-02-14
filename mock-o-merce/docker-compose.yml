@@ -1,0 +1,8 @@
+﻿version: '3.8'
+services:
+  fcecom-mock-o-merce:
+    build: .
+    image: fcecom-mock-o-merce
+    container_name: 'fcecom-mock-o-merce'
+    ports:
+      - '8080:8080'
