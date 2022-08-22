@@ -31,7 +31,7 @@ Strings were generated with [random-words](https://www.npmjs.com/package/random-
 
 ## Author
 
-[e-Spirit AG](https://www.e-spirit.com)
+[Crownpeak Technology GmbH](https://www.crownpeak.com)
 
 ## License
 

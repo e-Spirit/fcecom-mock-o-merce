@@ -6,3 +6,4 @@ services:
     container_name: 'fcecom-mock-o-merce'
     ports:
       - '8080:8080'
+
